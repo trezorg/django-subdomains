@@ -6,13 +6,17 @@ from django.contrib.sites.models import Site
 from django.core.urlresolvers import reverse as simple_reverse
 
 
+DEFAULT_URL_SCHEME = getattr(settings, 'DEFAULT_URL_SCHEME', '')
+DEFAULT_URL_SCHEMES = getattr(settings, 'DEFAULT_URL_SCHEMES', {})
+
+
 def current_site_domain():
     return Site.objects.get_current().domain
 
 get_domain = current_site_domain
 
 
-def urljoin(domain, path=None, scheme=None):
+def urljoin(domain, path=None, scheme=None, subdomain=None):
     """
     Joins a domain, path and scheme part together, returning a full URL.
 
@@ -23,7 +27,7 @@ def urljoin(domain, path=None, scheme=None):
     :returns: a full URL
     """
     if scheme is None:
-        scheme = getattr(settings, 'DEFAULT_URL_SCHEME', 'http')
+        scheme = DEFAULT_URL_SCHEMES.get(subdomain) or DEFAULT_URL_SCHEME
 
     return urlunparse((scheme, domain, path or '', None, None, None))
 
@@ -49,7 +53,7 @@ def reverse(viewname, subdomain=None, scheme=None, args=None, kwargs=None,
 
     path = simple_reverse(viewname, urlconf=urlconf, args=args, kwargs=kwargs,
         current_app=current_app)
-    return urljoin(domain, path, scheme=scheme)
+    return urljoin(domain, path, scheme=scheme, subdomain=subdomain)
 
 
 #: :func:`reverse` bound to insecure (non-HTTPS) URLs scheme
