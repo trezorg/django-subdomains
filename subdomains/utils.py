@@ -8,12 +8,59 @@ from django.core.urlresolvers import reverse as simple_reverse
 
 DEFAULT_URL_SCHEME = getattr(settings, 'DEFAULT_URL_SCHEME', '')
 DEFAULT_URL_SCHEMES = getattr(settings, 'DEFAULT_URL_SCHEMES', {})
+DEFAULT_SUBDOMAIN = getattr(settings, 'DEFAULT_SUBDOMAIN', None)
+UNSET = object()
+
+
+def get_default_urls_group():
+    """Find URLCONFS with same urls, split them by groups,
+    find default group with None
+    """
+    res = {}
+    for key, value in settings.SUBDOMAIN_URLCONFS.items():
+        res.setdefault(value, []).append(key)
+    return [val for value in res.values() for val in value
+            if None in value and val is not None]
 
 
 def current_site_domain():
     return Site.objects.get_current().domain
 
+
 get_domain = current_site_domain
+default_url_group = get_default_urls_group()
+
+
+def get_url_subdomain(request, subdomain=UNSET):
+    """get subdomain to get reverse url.
+    If subdomain is UNSET then try get sundomain attribute from request.
+    If subdomain is '' then try get sundomain attribute from request
+    and check if there is same subdomain in settings.SUBDOMAIN_URLCONFS in
+    a group with None(default)
+
+    SUBDOMAIN_URLCONFS = {
+        None: 'base.urls',
+        'www': 'base.urls',
+        'api': 'api.urls',
+    }
+    So, www is in same group with None, those are default domain urls
+    Else - just return subdomain
+    """
+    if (subdomain and subdomain is not UNSET) or subdomain is None:
+        return subdomain
+    request_subdomain = getattr(request, 'subdomain', None)\
+        if request is not None else None
+    if request_subdomain is None:
+        return DEFAULT_SUBDOMAIN
+    if subdomain is UNSET:
+        # get domain from request
+        return request_subdomain
+    elif subdomain == '':
+        # check either domain from request is in default group, if
+        # no - return DEFAULT_URL
+        if request_subdomain in default_url_group:
+            return request_subdomain
+    return DEFAULT_SUBDOMAIN
 
 
 def urljoin(domain, path=None, scheme=None, subdomain=None):
@@ -27,7 +74,7 @@ def urljoin(domain, path=None, scheme=None, subdomain=None):
     :returns: a full URL
     """
     if scheme is None:
-        scheme = DEFAULT_URL_SCHEMES.get(subdomain) or DEFAULT_URL_SCHEME
+        scheme = DEFAULT_URL_SCHEMES.get(subdomain) or DEFAULT_URL_SCHEME or ''
 
     return urlunparse((scheme, domain, path or '', None, None, None))
 
