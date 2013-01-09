@@ -3,8 +3,6 @@ from urlparse import urlunparse
 
 from django.conf import settings
 from django.contrib.sites.models import Site
-from django.core.urlresolvers import reverse as simple_reverse
-
 
 DEFAULT_URL_SCHEME = getattr(settings, 'DEFAULT_URL_SCHEME', '')
 DEFAULT_URL_SCHEMES = getattr(settings, 'DEFAULT_URL_SCHEMES', {})
@@ -92,6 +90,7 @@ def reverse(viewname, subdomain=None, scheme=None, args=None, kwargs=None,
     :param kwargs: named arguments used for URL reversing
     :param current_app: hint for the currently executing application
     """
+    from django.core.urlresolvers import reverse as simple_reverse
     urlconf = settings.SUBDOMAIN_URLCONFS.get(subdomain)
 
     domain = get_domain()
