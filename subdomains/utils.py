@@ -10,6 +10,17 @@ DEFAULT_SUBDOMAIN = getattr(settings, 'DEFAULT_SUBDOMAIN', None)
 UNSET = object()
 
 
+def memoize(func):
+    """Function memoization with argument"""
+    key = "__%s" % func.__name__
+    def inner(*args, **kwargs):
+        if not hasattr(func, key):
+            setattr(func, key, func(*args, **kwargs))
+        return getattr(func, key)
+    return inner
+
+
+@memoize
 def get_default_urls_group():
     """Find URLCONFS with same urls, split them by groups,
     find default group with None
@@ -21,12 +32,9 @@ def get_default_urls_group():
             if None in value and val is not None]
 
 
-def current_site_domain():
+@memoize
+def get_domain():
     return Site.objects.get_current().domain
-
-
-get_domain = current_site_domain
-default_url_group = get_default_urls_group()
 
 
 def get_url_subdomain(request, subdomain=UNSET):
@@ -56,7 +64,7 @@ def get_url_subdomain(request, subdomain=UNSET):
     elif subdomain == '':
         # check either domain from request is in default group, if
         # no - return DEFAULT_URL
-        if request_subdomain in default_url_group:
+        if request_subdomain in get_default_urls_group():
             return request_subdomain
     return DEFAULT_SUBDOMAIN
 
